@@ -150,3 +150,9 @@ dist/
 /guix-build-*
 
 /ci/scratch/
+
+# HANBIT: never commit wallets, keys or node config
+wallet.dat
+*.wallet
+*.bak
+hanbit.conf
