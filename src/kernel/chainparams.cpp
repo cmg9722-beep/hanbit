@@ -86,8 +86,12 @@ public:
         consensus.SegwitHeight = 481824; // 0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893
         consensus.MinBIP9WarningHeight = 483840; // segwit activation height + miner confirmation window
         consensus.powLimit = uint256S("00000ffff0000000000000000000000000000000000000000000000000000000");
-        consensus.nPowTargetTimespan = 7 * 24 * 60 * 60; // one week
-        consensus.nPowTargetSpacing = 5 * 60; // 5 minutes
+        // HANBIT 2026-10: block interval 5 min -> 10 min (same as Bitcoin) from height 60480.
+        // Retarget window stays 2016 blocks; pre-fork retargets use the old one-week timespan.
+        consensus.nPowTargetTimespan = 14 * 24 * 60 * 60; // two weeks
+        consensus.nPowTargetSpacing = 10 * 60; // 10 minutes
+        consensus.nPowSpacingForkHeight = 60480; // 30 * 2016
+        consensus.nPowTargetTimespanPreFork = 7 * 24 * 60 * 60; // one week (5 min x 2016)
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1815; // 90% of 2016

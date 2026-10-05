@@ -111,6 +111,14 @@ struct Params {
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
+    /** HANBIT: block height from which nPowTargetSpacing/nPowTargetTimespan apply.
+     *  Retargets below this height use nPowTargetTimespanPreFork (0 = no fork). */
+    int nPowSpacingForkHeight{0};
+    int64_t nPowTargetTimespanPreFork{0};
+    int64_t PowTargetTimespanAt(int64_t height) const
+    {
+        return height < nPowSpacingForkHeight ? nPowTargetTimespanPreFork : nPowTargetTimespan;
+    }
     std::chrono::seconds PowTargetSpacing() const
     {
         return std::chrono::seconds{nPowTargetSpacing};
