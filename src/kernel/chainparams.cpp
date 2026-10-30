@@ -78,13 +78,16 @@ public:
             uint256S("0x00000000000002dc756eebf4f49723ed8d30cc28a5f108eb94b1ba88ac4f9c22"), SCRIPT_VERIFY_NONE);
         consensus.script_flag_exceptions.emplace( // Taproot exception
             uint256S("0x0000000000000000000f14c35b2d841e986ab5441de8c585d5ffe55ea1e395ad"), SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS);
-        consensus.BIP34Height = 227931;
-        consensus.BIP34Hash = uint256S("0x000000000000024b89b42a942fe0d9fea3bb44ab7bd1b19115dd6a759c0808b8");
-        consensus.BIP65Height = 388381; // 000000000000000004c2b624ed5d7756c508d90fd0da2c7c679febfa6c4735f0
-        consensus.BIP66Height = 363725; // 00000000000000000379eaa19dce8c9b722d46ae6a57c2f1a988119488b50931
-        consensus.CSVHeight = 419328; // 000000000000000004a1b34462cb8aeebd5799177f7a29cf28f2d1961716b5b5
-        consensus.SegwitHeight = 481824; // 0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893
-        consensus.MinBIP9WarningHeight = 483840; // segwit activation height + miner confirmation window
+        // HANBIT 2026-11: BIP34/65/66/CSV/SegWit had Bitcoin's activation heights (227931..481824),
+        // so none were enforced and witness outputs (hb1...) were anyone-can-spend by consensus.
+        // Enforce all of them from 64512, together with ASERT. No non-coinbase tx exists before it.
+        consensus.BIP34Height = 64512;
+        consensus.BIP34Hash = uint256();
+        consensus.BIP65Height = 64512;
+        consensus.BIP66Height = 64512;
+        consensus.CSVHeight = 64512;
+        consensus.SegwitHeight = 64512;
+        consensus.MinBIP9WarningHeight = 64512 + 2016; // segwit activation height + miner confirmation window
         consensus.powLimit = uint256S("00000ffff0000000000000000000000000000000000000000000000000000000");
         // HANBIT 2026-10: block interval 5 min -> 10 min (same as Bitcoin) from height 60480.
         // Retarget window stays 2016 blocks; pre-fork retargets use the old one-week timespan.
@@ -109,12 +112,14 @@ public:
 
         // Deployment of Taproot (BIPs 340-342)
         consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].bit = 2;
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = 1619222400; // April 24th, 2021
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = 1628640000; // August 11th, 2021
-        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 709632; // Approximately November 12th, 2021
+        // HANBIT: Bitcoin's 2021 signalling window never happened here; enforce Taproot always
+        // (no witness v1 output was ever created on this chain).
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nStartTime = Consensus::BIP9Deployment::ALWAYS_ACTIVE;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].nTimeout = Consensus::BIP9Deployment::NO_TIMEOUT;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TAPROOT].min_activation_height = 0;
 
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
-        consensus.defaultAssumeValid = uint256S("0x0000000000000000000000000000000000000000000000000000000000000000");
+        consensus.nMinimumChainWork = uint256S("0x000000000000000000000000000000000000000000000000000083cb0ebb306b"); // block 63400
+        consensus.defaultAssumeValid = uint256S("0x000000003eb3348776114f127f61fdbf5e77cd9d7983a6eb9d9c14c6100a68df"); // block 63400
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -127,8 +132,8 @@ public:
         pchMessageStart[3] = 0x42;
         nDefaultPort = 9777;
         nPruneAfterHeight = 100000;
-        m_assumed_blockchain_size = 540;
-        m_assumed_chain_state_size = 7;
+        m_assumed_blockchain_size = 1;
+        m_assumed_chain_state_size = 1;
 
         genesis = CreateGenesisBlock(1776556800, 808525, 0x1e0ffff0, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
@@ -140,7 +145,7 @@ public:
         // This is fine at runtime as we'll fall back to using them as an addrfetch if they don't support the
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
-        vSeeds.emplace_back("seed.btc.petertodd.org."); // Peter Todd, only supports x1, x5, x9, and xd
+        // HANBIT: no DNS seeds yet; fixed seed = HANBIT mainnet node (src/chainparamsseeds.h)
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,0);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,5);
@@ -167,10 +172,10 @@ public:
         };
 
         chainTxData = ChainTxData{
-            // Data from RPC: getchaintxstats 4096 000000000000000000035c3f0d31e71a5ee24c5aaf3354689f65bd7b07dee632
-            .nTime    = 1680665245,
-            .nTxCount = 820876044,
-            .dTxRate  = 3.672283614033389,
+            // HANBIT: block 63400 (000000003eb33487...)
+            .nTime    = 1793367570,
+            .nTxCount = 63401,
+            .dTxRate  = 0.001667,
         };
     }
 };
