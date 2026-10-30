@@ -1,78 +1,98 @@
-Bitcoin Core integration/staging tree
-=====================================
+# HANBIT (HBT) — Korean Peer-to-Peer Electronic Cash
 
-https://bitcoincore.org
+<p align="center">
+  <b>한빛 — 한국의 빛, 세계의 자유</b><br/>
+  <i>Korean Light — Freedom for the World</i>
+</p>
 
-For an immediately usable, binary version of the Bitcoin Core software, see
-https://bitcoincore.org/en/download/.
+---
 
-What is Bitcoin Core?
----------------------
+## What is HANBIT?
 
-Bitcoin Core connects to the Bitcoin peer-to-peer network to download and fully
-validate blocks and transactions. It also includes a wallet and graphical user
-interface, which can be optionally built.
+HANBIT is a peer-to-peer electronic cash system based on Bitcoin Core 25.0.
+It carries the spirit of Satoshi Nakamoto — decentralization, peer-to-peer freedom, and no central authority — with the identity of Korea.
 
-Further information about Bitcoin Core is available in the [doc folder](/doc).
+No pre-mine. No ICO. No company behind it.
+Just code, nodes, and mathematics.
 
-License
--------
+## Specifications
 
-Bitcoin Core is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see https://opensource.org/licenses/MIT.
+| Property | Value |
+|----------|-------|
+| Name | HANBIT (한빛) |
+| Ticker | HBT |
+| Max Supply | 21,000,000 HBT |
+| Block Time | 10 minutes (5 minutes before block 60,480) |
+| Difficulty | Per-block ASERT (aserti3-2d, half-life 2 h) from block 64,512 |
+| Initial Reward | 50 HBT |
+| Halving | Every 210,000 blocks |
+| Algorithm | SHA-256d Proof of Work (mine it with any Bitcoin miner) |
+| P2P Port | 9777 |
+| Address Prefix | hb1... (bech32) |
+| Genesis Date | 2026-04-19 |
 
-Development Process
--------------------
+## Genesis Block
 
-The `master` branch is regularly built (see `doc/build-*.md` for instructions) and tested, but it is not guaranteed to be
-completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
-regularly from release branches to indicate new official, stable release versions of Bitcoin Core.
+```
+Hash    : 00000aef5bca6af5b63f8e0a56b605d5cc07c1291a1a4b3db5800cb8e9d51196
+Message : "HANBIT 19/Apr/2026 Korean light rising in world blockchain"
+Time    : 1776556800
+Nonce   : 808525
+```
 
-The https://github.com/bitcoin-core/gui repository is used exclusively for the
-development of the GUI. Its master branch is identical in all monotree
-repositories. Release branches and tags do not exist, so please do not fork
-that repository unless it is for development reasons.
+## Network
 
-The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md)
-and useful hints for developers can be found in [doc/developer-notes.md](doc/developer-notes.md).
+| | |
+|-|-|
+| Block Explorer | http://168.144.33.159:3002 |
+| Node (mainnet) | 168.144.33.159:9777 |
 
-Testing
--------
+**Connect to network** — add to `~/.hanbit/hanbit.conf`:
+```
+addnode=168.144.33.159:9777
+```
 
-Testing and code review is the bottleneck for development; we get more pull
-requests than we can review and test on short notice. Please be patient and help out by testing
-other people's pull requests, and remember this is a security-critical project where any mistake might cost people
-lots of money.
+## Building from Source
 
-### Automated Testing
+```bash
+# Dependencies (Ubuntu 22.04)
+sudo apt-get install build-essential libtool autotools-dev automake pkg-config \
+  libssl-dev libevent-dev bsdmainutils libboost-all-dev libsqlite3-dev
 
-Developers are strongly encouraged to write [unit tests](src/test/README.md) for new code, and to
-submit new unit tests for old code. Unit tests can be compiled and run
-(assuming they weren't disabled in configure) with: `make check`. Further details on running
-and extending unit tests can be found in [/src/test/README.md](/src/test/README.md).
+# Build
+git clone https://github.com/cmg9722-beep/hanbit.git
+cd hanbit
+./autogen.sh
+./configure --without-gui --disable-bench
+make -j$(nproc)
+```
 
-There are also [regression and integration tests](/test), written
-in Python.
-These tests can be run (if the [test dependencies](/test) are installed) with: `test/functional/test_runner.py`
+## Key Changes from Bitcoin Core 25.0
 
-The CI (Continuous Integration) systems make sure that every pull request is built for Windows, Linux, and macOS,
-and that unit/sanity tests are run automatically.
+- `src/kernel/chainparams.cpp` — HANBIT genesis block and network parameters
+- Block interval 10 minutes from height 60,480 (`src/pow.cpp`, `src/consensus/params.h`)
+- From height 64,512: per-block ASERT difficulty, the algorithm Bitcoin Cash uses,
+  so one large miner joining or leaving cannot flood or stall a small chain.
+  If no block is found for 6 hours, the target doubles for every further hour.
+  Tests: `src/test/pow_tests.cpp` (`hanbit_*`)
 
-### Manual Quality Assurance (QA) Testing
+**Hard fork notice:** every node must run a build that includes the ASERT change
+before block 64,512.
 
-Changes should be tested by somebody other than the developer who wrote the
-code. This is especially important for large or high-risk changes. It is useful
-to add a test plan to the pull request description if testing the changes is
-not straightforward.
+## Philosophy
 
-Translations
-------------
+> "What is needed is an electronic payment system based on cryptographic proof
+> instead of trust, allowing any two willing parties to transact directly
+> with each other without the need for a trusted third party."
+> — Satoshi Nakamoto, 2008
 
-Changes to translations as well as new translations can be submitted to
-[Bitcoin Core's Transifex page](https://www.transifex.com/bitcoin/bitcoin/).
+HANBIT extends this vision with the spirit of Korea (태극기):
+**Balance. Harmony. Freedom.**
 
-Translations are periodically pulled from Transifex and merged into the git repository. See the
-[translation process](doc/translation_process.md) for details on how this works.
+## License
 
-**Important**: We do not accept translation changes as GitHub pull requests because the next
-pull from Transifex would automatically overwrite them again.
+MIT License — same as Bitcoin Core.
+
+---
+
+*Satoshi Nakamoto's vision. Korean light.*
