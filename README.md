@@ -75,9 +75,12 @@ make -j$(nproc)
   so one large miner joining or leaving cannot flood or stall a small chain.
   If no block is found for 6 hours, the target doubles for every further hour.
   Tests: `src/test/pow_tests.cpp` (`hanbit_*`)
+- From height 64,512: BIP34, BIP65 (CLTV), BIP66, CSV and SegWit are enforced
+  (they had Bitcoin's activation heights before). Taproot is always active.
+- HANBIT defaults: data directory `~/.hanbit` (`%APPDATA%\Hanbit` on Windows),
+  config file `hanbit.conf`, RPC port 9776, built-in seed node 168.144.33.159:9777.
 
-**Hard fork notice:** every node must run a build that includes the ASERT change
-before block 64,512.
+**Hard fork notice:** every node must run v1.3.0 or later before block 64,512.
 
 ## Philosophy
 
