@@ -4129,6 +4129,14 @@ bool Chainstate::LoadChainTip()
     PruneBlockIndexCandidates();
 
     tip = m_chain.Tip();
+    // HANBIT: publish the loaded tip for getblocktemplate longpoll. Otherwise g_best_block stays
+    // null after a restart until the next block, and every longpoll returns at once (CPU miners
+    // then restart work hundreds of times per second).
+    {
+        LOCK(g_best_block_mutex);
+        g_best_block = tip->GetBlockHash();
+        g_best_block_cv.notify_all();
+    }
     LogPrintf("Loaded best chain: hashBestChain=%s height=%d date=%s progress=%f\n",
               tip->GetBlockHash().ToString(),
               m_chain.Height(),
