@@ -119,6 +119,18 @@ struct Params {
     {
         return height < nPowSpacingForkHeight ? nPowTargetTimespanPreFork : nPowTargetTimespan;
     }
+    /** HANBIT: per-block ASERT difficulty (aserti3-2d) from this height (0 = never).
+     *  The anchor is the block at nAsertActivationHeight - 1. */
+    int nAsertActivationHeight{0};
+    int64_t nAsertHalfLife{0};
+    /** HANBIT: stall relief. If a block comes more than nStallReliefAfter seconds
+     *  after its parent, its target doubles for every further full nStallReliefStep. */
+    int64_t nStallReliefAfter{0};
+    int64_t nStallReliefStep{0};
+    bool AsertActiveAt(int64_t height) const
+    {
+        return nAsertActivationHeight > 0 && height >= nAsertActivationHeight;
+    }
     std::chrono::seconds PowTargetSpacing() const
     {
         return std::chrono::seconds{nPowTargetSpacing};

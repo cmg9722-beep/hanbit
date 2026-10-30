@@ -92,6 +92,12 @@ public:
         consensus.nPowTargetSpacing = 10 * 60; // 10 minutes
         consensus.nPowSpacingForkHeight = 60480; // 30 * 2016
         consensus.nPowTargetTimespanPreFork = 7 * 24 * 60 * 60; // one week (5 min x 2016)
+        // HANBIT 2026-11: per-block ASERT difficulty (as Bitcoin Cash) from height 64512 (32 * 2016).
+        // Small SHA-256 chain: one ASIC joining or leaving must not flood or stall it.
+        consensus.nAsertActivationHeight = 64512;
+        consensus.nAsertHalfLife = 2 * 60 * 60; // 2 hours
+        consensus.nStallReliefAfter = 6 * 60 * 60; // no block for 6 hours
+        consensus.nStallReliefStep = 60 * 60; // then target x2 per further hour
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.fPowNoRetargeting = false;
         consensus.nRuleChangeActivationThreshold = 1815; // 90% of 2016

@@ -2,7 +2,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <arith_uint256.h>
 #include <chain.h>
+#include <cmath>
 #include <chainparams.h>
 #include <pow.h>
 #include <test/util/random.h>
@@ -200,6 +202,109 @@ BOOST_AUTO_TEST_CASE(ChainParams_TESTNET_sanity)
 BOOST_AUTO_TEST_CASE(ChainParams_SIGNET_sanity)
 {
     sanity_check_chainparams(*m_node.args, CBaseChainParams::SIGNET);
+}
+
+
+/* HANBIT: ASERT basics */
+BOOST_AUTO_TEST_CASE(hanbit_asert_basics)
+{
+    const arith_uint256 lim = UintToArith256(uint256S("00000ffff0000000000000000000000000000000000000000000000000000000"));
+    const arith_uint256 ref = lim >> 12;
+    const int64_t sp = 600, hl = 7200;
+    // on schedule -> unchanged
+    BOOST_CHECK(CalculateASERT(ref, sp, sp * 11, 10, lim, hl) == ref);
+    // one half-life late -> x2, early -> /2
+    BOOST_CHECK(CalculateASERT(ref, sp, sp * 11 + hl, 10, lim, hl) == ref * 2);
+    BOOST_CHECK(CalculateASERT(ref, sp, sp * 11 - hl, 10, lim, hl) == ref / 2);
+    // clamps
+    BOOST_CHECK(CalculateASERT(ref, sp, 1000000000, 0, lim, hl) == lim);
+    BOOST_CHECK(CalculateASERT(ref, sp, -1000000000, 0, lim, hl) == arith_uint256(1));
+    // monotonic in time, and fractional factor close to 2^x
+    arith_uint256 prev = 0;
+    for (int64_t dt = -hl; dt <= hl; dt += 97) {
+        arith_uint256 t = CalculateASERT(ref, sp, sp + dt, 0, lim, hl);
+        BOOST_CHECK(t >= prev);
+        prev = t;
+        double want = ref.getdouble() * std::pow(2.0, double(dt) / hl);
+        BOOST_CHECK(std::abs(t.getdouble() / want - 1.0) < 0.0002);
+    }
+}
+
+/* HANBIT: simulate a 143,000x miner joining and leaving */
+BOOST_AUTO_TEST_CASE(hanbit_asert_hashrate_shock)
+{
+    const auto chainParams = CreateChainParams(*m_node.args, CBaseChainParams::MAIN);
+    Consensus::Params p = chainParams->GetConsensus();
+    BOOST_CHECK_EQUAL(p.nAsertActivationHeight, 64512);
+    p.nAsertActivationHeight = 100;
+    const arith_uint256 lim = UintToArith256(p.powLimit);
+
+    const int N = 6000;
+    std::vector<CBlockIndex> b(N);
+    const double cpu = 8.4e6; // H/s, today's network
+    auto expected_secs = [](uint32_t nBits, double hps) {
+        arith_uint256 t; t.SetCompact(nBits);
+        return std::ldexp(1.0, 256) / (t.getdouble() + 1.0) / hps;
+    };
+    arith_uint256 start; start.SetCompact(0x1d00ffff); // ~ today's difficulty
+    int64_t now = 1790000000;
+    int flood_blocks = -1, asic_on = 1000, asic_off = 3000;
+    double stall_secs = -1, sum_after = 0; int n_after = 0;
+    for (int h = 0; h < N; ++h) {
+        b[h].nHeight = h;
+        b[h].pprev = h ? &b[h - 1] : nullptr;
+        double hps = (h >= asic_on && h < asic_off) ? cpu * 143000 : cpu;
+        if (h <= 100) {
+            b[h].nBits = start.GetCompact();
+        } else {
+            CBlockHeader hdr; hdr.nTime = now + 1;
+            b[h].nBits = GetNextWorkRequired(&b[h - 1], &hdr, p);
+        }
+        double secs = expected_secs(b[h].nBits, hps);
+        if (h > 100 && secs > 6 * 3600) {
+            // stall relief: find the time at which relaxed target makes the block expected now
+            int64_t gap = 0;
+            while (true) {
+                gap += 60;
+                CBlockHeader hdr; hdr.nTime = now + gap;
+                uint32_t bits = GetNextWorkRequired(&b[h - 1], &hdr, p);
+                if (expected_secs(bits, hps) <= gap) { b[h].nBits = bits; secs = gap; break; }
+            }
+        }
+        if (h == asic_off) stall_secs = secs;
+        if (h >= asic_on && flood_blocks < 0 && secs >= 300) flood_blocks = h - asic_on;
+        if (h > asic_off + 300 && h < asic_off + 2300) { sum_after += secs; ++n_after; }
+        now += int64_t(secs < 1 ? 1 : secs);
+        b[h].nTime = now;
+    }
+    BOOST_TEST_MESSAGE("flood blocks " << flood_blocks << ", stall hours " << stall_secs / 3600 << ", avg after " << sum_after / n_after);
+    BOOST_CHECK(flood_blocks >= 0 && flood_blocks < 400);
+    BOOST_CHECK(stall_secs < 30 * 3600);
+    BOOST_CHECK(std::abs(sum_after / n_after - 600) < 60);
+    // fork not active before activation: old rule untouched
+    BOOST_CHECK(!p.AsertActiveAt(99));
+    BOOST_CHECK(p.AsertActiveAt(100));
+}
+
+
+/* HANBIT: stall relief steps are exact; a header rolled across a step needs new nBits */
+BOOST_AUTO_TEST_CASE(hanbit_stall_relief_step)
+{
+    const auto chainParams = CreateChainParams(*m_node.args, CBaseChainParams::MAIN);
+    Consensus::Params p = chainParams->GetConsensus();
+    p.nAsertActivationHeight = 10;
+    std::vector<CBlockIndex> b(20);
+    for (int h = 0; h < 20; ++h) {
+        b[h].nHeight = h; b[h].pprev = h ? &b[h - 1] : nullptr;
+        b[h].nTime = 1790000000 + 600 * h; b[h].nBits = 0x1d00ffff;
+    }
+    auto bits_at = [&](int64_t gap) { CBlockHeader hdr; hdr.nTime = b[19].nTime + gap; return GetNextWorkRequired(&b[19], &hdr, p); };
+    const uint32_t normal = bits_at(600);
+    BOOST_CHECK_EQUAL(bits_at(6 * 3600), normal);           // not yet
+    BOOST_CHECK_EQUAL(bits_at(7 * 3600 - 60), normal);      // first full step not reached
+    arith_uint256 a, c; a.SetCompact(normal); c.SetCompact(bits_at(7 * 3600 + 60));
+    BOOST_CHECK(bits_at(7 * 3600 + 60) != normal);          // rolled across a step -> different nBits
+    BOOST_CHECK(c.getdouble() / a.getdouble() > 1.99 && c.getdouble() / a.getdouble() < 2.01);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
