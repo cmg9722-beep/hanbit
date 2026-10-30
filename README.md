@@ -80,7 +80,7 @@ make -j$(nproc)
 - HANBIT defaults: data directory `~/.hanbit` (`%APPDATA%\Hanbit` on Windows),
   config file `hanbit.conf`, RPC port 9776, built-in seed node 168.144.33.159:9777.
 
-**Hard fork notice:** every node must run v1.3.0 or later before block 64,512.
+**Hard fork notice:** every node must run v1.3.1 or later before block 64,512.
 
 ## Philosophy
 
